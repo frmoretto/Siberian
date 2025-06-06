@@ -357,9 +357,43 @@ static CDVWKInAppBrowser* instance = nil;
 
 - (void)openInSystem:(NSURL*)url
 {
-    if ([[UIApplication sharedApplication] openURL:url] == NO) {
+    // First check if this is a special URL scheme that needs specific handling
+    NSString *scheme = [url scheme];
+    
+    // Log the URL for debugging
+    NSLog(@"Attempting to open external URL: %@", [url absoluteString]);
+    
+    if ([scheme isEqualToString:@"tel"] || 
+        [scheme isEqualToString:@"mailto"] || 
+        [scheme isEqualToString:@"maps"] || 
+        [scheme isEqualToString:@"itms-apps"] || 
+        [scheme isEqualToString:@"itms-appss"]) {
+        
+        NSLog(@"Detected special URL scheme: %@", scheme);
+    }
+    
+    // Check if the app can open this URL
+    if ([[UIApplication sharedApplication] canOpenURL:url]) {
+        if (@available(iOS 10.0, *)) {
+            [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:^(BOOL success) {
+                if (!success) {
+                    NSLog(@"Failed to open URL: %@", [url absoluteString]);
+                    // Try alternative method as fallback
+                    [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:CDVPluginHandleOpenURLNotification object:url]];
+                }
+            }];
+        } else {
+            // Fallback for older iOS versions
+            BOOL success = [[UIApplication sharedApplication] openURL:url];
+            if (!success) {
+                NSLog(@"Failed to open URL with legacy method: %@", [url absoluteString]);
+                [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:CDVPluginHandleOpenURLNotification object:url]];
+            }
+        }
+    } else {
+        NSLog(@"Application cannot open URL: %@", [url absoluteString]);
+        // Try posting notification as last resort
         [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:CDVPluginHandleOpenURLNotification object:url]];
-        [[UIApplication sharedApplication] openURL:url];
     }
 }
 
