@@ -357,10 +357,25 @@ static CDVWKInAppBrowser* instance = nil;
 
 - (void)openInSystem:(NSURL*)url
 {
-    if (![[UIApplication sharedApplication] canOpenURL:url]) {
-        [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:CDVPluginHandleOpenURLNotification object:url]];
+    // Check if the app can open this URL
+    if ([[UIApplication sharedApplication] canOpenURL:url]) {
+        if (@available(iOS 10.0, *)) {
+            [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:^(BOOL success) {
+                if (!success) {
+                    // Try alternative method as fallback
+                    [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:CDVPluginHandleOpenURLNotification object:url]];
+                }
+            }];
+        } else {
+            // Fallback for older iOS versions
+            BOOL success = [[UIApplication sharedApplication] openURL:url];
+            if (!success) {
+                [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:CDVPluginHandleOpenURLNotification object:url]];
+            }
+        }
     } else {
-        [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
+        // Try posting notification as last resort
+        [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:CDVPluginHandleOpenURLNotification object:url]];
     }
 }
 
