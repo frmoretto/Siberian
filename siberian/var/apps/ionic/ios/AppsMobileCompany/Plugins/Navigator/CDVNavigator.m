@@ -6,12 +6,59 @@
 
 @implementation CDVNavigator
 
+- (void)openUrl:(CDVInvokedUrlCommand *)command {
+    NSString *url = [command.arguments objectAtIndex:0];
+    [self openByUrl:url];
+    
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
 - (void)openByUrl:(NSString *)url {
-    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:url]];
+    NSURL *nsUrl = [NSURL URLWithString:url];
+    if (!nsUrl) {
+        NSLog(@"Invalid URL: %@", url);
+        return;
+    }
+    
+    if (@available(iOS 10.0, *)) {
+        [[UIApplication sharedApplication] openURL:nsUrl options:@{} completionHandler:^(BOOL success) {
+            if (!success) {
+                NSLog(@"Failed to open URL: %@", url);
+            }
+        }];
+    } else {
+        // Fallback for older iOS versions
+        BOOL success = [[UIApplication sharedApplication] openURL:nsUrl];
+        if (!success) {
+            NSLog(@"Failed to open URL: %@", url);
+        }
+    }
 }
 
 - (void)navigate:(CDVInvokedUrlCommand *)command {
-    [self showAlert:command.arguments];
+    // Direct navigation without showing alert
+    NSArray *latlng = command.arguments;
+    NSString *toLat = [NSString stringWithFormat:@"%@",[latlng objectAtIndex:0]];
+    NSString *toLng = [NSString stringWithFormat:@"%@",[latlng objectAtIndex:1]];
+    
+    // Check if Apple Maps is available
+    BOOL isAppleMapsAvailable = [[UIApplication sharedApplication] canOpenURL:[NSURL URLWithString:@"maps://"]];
+    
+    // Check if Google Maps is available
+    BOOL isGoogleMapsAvailable = [[UIApplication sharedApplication] canOpenURL:[NSURL URLWithString:@"comgooglemaps-x-callback://"]];
+    
+    // Check if Waze is available
+    BOOL isWazeAvailable = [[UIApplication sharedApplication] canOpenURL:[NSURL URLWithString:@"waze://"]];
+    
+    // If no navigation apps are available, default to Apple Maps
+    if (!isAppleMapsAvailable && !isGoogleMapsAvailable && !isWazeAvailable) {
+        [self openByUrl:[NSString stringWithFormat:@"maps://?q=%f,%f", [toLat doubleValue], [toLng doubleValue]]];
+        return;
+    }
+    
+    // Otherwise show the chooser
+    [self showAlert:latlng];
 }
 
 - (void)showAlert:(NSArray*) latlng {
