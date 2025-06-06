@@ -206,6 +206,19 @@
 		<string>waze</string>
 		<string>comgooglemaps</string>
 		<string>comgooglemaps-x-callback</string>
+		<string>maps</string>
+		<string>http</string>
+		<string>https</string>
+		<string>tel</string>
+		<string>sms</string>
+		<string>mailto</string>
+		<string>whatsapp</string>
+		<string>instagram</string>
+		<string>fb</string>
+		<string>twitter</string>
+		<string>youtube</string>
+		<string>itms-apps</string>
+		<string>itms-appss</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>
